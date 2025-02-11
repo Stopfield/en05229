@@ -5,15 +5,15 @@ import time
 import multiprocessing
 
 # Configuração de logging
-logging.basicConfig(level=logging.INFO)
+
 
 # Configuração Zookeeper
-ZK_ADDRESS = "127.0.0.1:2181"
-BARRIER_PATH = "/barreira_filosofos"
+# TODO: Colocar no Main
 
-class Barrier:
+class SimpleBarrier:
     """Barreira simples com função barrier_wait"""
     def __init__(self, client, path):
+        # TODO: Definir condição de saída
         self.client = client
         self.path = path
 
@@ -31,6 +31,8 @@ class Barrier:
 
     def wait(self):
         """Função barrier_wait() simplificada: espera todos os processos chegarem"""
+        # TODO: Colocar multiprocessing só no lado cliente
+        # TODO: O Cliente só deve chamar `wait()`, não o `create()`. Verificar se não existir, criar.
         event = multiprocessing.Event()
 
         def watch_event(event_data):
@@ -46,25 +48,32 @@ class Barrier:
         event.wait()
         return event.is_set()
 
-def filosofo():
-    """Simula filósofos esperando e comendo"""
-    client = KazooClient(hosts=ZK_ADDRESS)
-    client.start()
 
-    barrier = Barrier(client, BARRIER_PATH)
-    barrier.wait()  # Espera pela remoção da barreira
-
-    print(f"🍷 Filósofo {multiprocessing.current_process().name} começou a comer!")
-    time.sleep(2)  # Simula tempo de refeição
-    print(f"✅ Filósofo {multiprocessing.current_process().name} terminou de comer!")
-
-    client.stop()
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
+
+    def filosofo():
+        """Simula filósofos esperando e comendo"""
+        client = KazooClient(hosts=ZK_ADDRESS)
+        client.start()
+
+        barrier = SimpleBarrier(client, BARRIER_PATH)
+        barrier.wait()  # Espera pela remoção da barreira
+
+        print(f"🍷 Filósofo {multiprocessing.current_process().name} começou a comer!")
+        time.sleep(2)  # Simula tempo de refeição
+        print(f"✅ Filósofo {multiprocessing.current_process().name} terminou de comer!")
+
+        client.stop()
+    
+    ZK_ADDRESS = "127.0.0.1:2181"
+    BARRIER_PATH = "/barreira_filosofos"
+    
     client = KazooClient(hosts=ZK_ADDRESS)
     client.start()
 
-    barrier = Barrier(client, BARRIER_PATH)
+    barrier = SimpleBarrier(client, BARRIER_PATH)
     barrier.create()  # Criação da barreira
 
     # Criando e iniciando os filósofos como processos
